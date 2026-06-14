@@ -13,6 +13,8 @@ import com.mojang.util.UUIDTypeAdapter;
 import net.wouto.proxy.response.result.HasJoinedMinecraftServerResponseImpl;
 import net.wouto.proxy.response.result.MinecraftProfilePropertiesResponseImpl;
 import net.wouto.proxy.response.result.ProfileSearchResultsResponseImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.Proxy;
 import java.util.HashSet;
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 public class MojangAPI {
+
+	private static final Logger log = LoggerFactory.getLogger(MojangAPI.class);
 
 	private static MojangAPI instance;
 
@@ -76,7 +80,7 @@ public class MojangAPI {
 				ProfileSearchResultsResponse result = this.authenticationService.makeRequest(HttpAuthenticationService.constantURL("https://api.mojang.com/profiles/" + game.getName().toLowerCase()), nameSetPart, ProfileSearchResultsResponse.class);
 				return new ProfileSearchResultsResponseImpl(result.getProfiles());
 			} catch (AuthenticationException e) {
-				e.printStackTrace();
+				log.warn("findProfilesByNames request to Mojang failed", e);
 			}
 
 		}

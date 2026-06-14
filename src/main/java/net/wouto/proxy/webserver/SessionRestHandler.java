@@ -4,10 +4,14 @@ import net.wouto.proxy.MojangProxyServer;
 import net.wouto.proxy.cache.GameProfileCache;
 import net.wouto.proxy.response.result.HasJoinedMinecraftServerResponseImpl;
 import net.wouto.proxy.response.result.MinecraftProfilePropertiesResponseImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class SessionRestHandler {
+
+	private static final Logger log = LoggerFactory.getLogger(SessionRestHandler.class);
 
 	private GameProfileCache cache;
 
@@ -23,7 +27,7 @@ public class SessionRestHandler {
 			@RequestParam(value = "proxyKey", required = false) String key) throws Exception {
 		MojangProxyServer.authorize(key);
 		if (MojangProxyServer.LOG_KNOWN_REQUESTS) {
-			System.out.println("forwarding hasJoined(username:\"" + username + "\", serverId:\"" + serverId + "\")");
+			log.debug("forwarding hasJoined(username:\"{}\", serverId:\"{}\")", username, serverId);
 		}
 		return this.cache.hasJoined(username, serverId);
 	}
@@ -36,7 +40,7 @@ public class SessionRestHandler {
 			@RequestParam(value = "proxyKey", required = false) String key) throws Exception {
 		MojangProxyServer.authorize(key);
 		if (MojangProxyServer.LOG_KNOWN_REQUESTS) {
-			System.out.println("forwarding fillGameProfile(uuid:\"" + uuid + "\", unsigned:" + unsigned + ")");
+			log.debug("forwarding fillGameProfile(uuid:\"{}\", unsigned:{})", uuid, unsigned);
 		}
 		return this.cache.fillGameProfile(uuid, unsigned);
 	}

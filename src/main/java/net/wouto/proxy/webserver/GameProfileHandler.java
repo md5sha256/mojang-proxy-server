@@ -5,6 +5,8 @@ import net.wouto.proxy.MojangProxyServer;
 import net.wouto.proxy.cache.GameProfileCache;
 import net.wouto.proxy.response.result.BasicGameProfile;
 import net.wouto.proxy.response.result.ProfileSearchResultsResponseImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -12,6 +14,8 @@ import java.util.List;
 
 @RestController
 public class GameProfileHandler {
+
+	private static final Logger log = LoggerFactory.getLogger(GameProfileHandler.class);
 
 	private GameProfileCache cache;
 
@@ -24,8 +28,7 @@ public class GameProfileHandler {
 	public BasicGameProfile[] findProfilesByNames(@RequestBody List<String> names, @RequestParam(value = "proxyKey", required = false) String key) throws Exception {
 		MojangProxyServer.authorize(key);
 		if (MojangProxyServer.LOG_KNOWN_REQUESTS) {
-			String namesCombined = "\"" + String.join("\", \"", names) + "\"";
-			System.out.println("forwarding findProfilesByNames(names:[" + namesCombined + "])");
+			log.debug("forwarding findProfilesByNames(names:[\"{}\"])", String.join("\", \"", names));
 		}
 		ProfileSearchResultsResponseImpl response = this.cache.findProfilesByNames(names);
 		if (response.getProfiles() == null) {

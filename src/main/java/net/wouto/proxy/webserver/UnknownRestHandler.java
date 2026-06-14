@@ -3,6 +3,8 @@ package net.wouto.proxy.webserver;
 import net.wouto.proxy.MojangProxyServer;
 import net.wouto.proxy.response.BaseResponse;
 import net.wouto.proxy.response.error.UnknownRequestResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -17,6 +19,8 @@ import java.util.Date;
 
 @RestController
 public class UnknownRestHandler {
+
+	private static final Logger log = LoggerFactory.getLogger(UnknownRestHandler.class);
 
 	private File unknownRequestsFolder = new File("./unknown-requests/");
 	private DateFormat dateFormat = new SimpleDateFormat("YYYY-MM-dd HH.mm.ss.SSS");
@@ -45,9 +49,9 @@ public class UnknownRestHandler {
 			try {
 				File f = getNextRequestDumpPath();
 				MojangProxyServer.get().getMapper(true).writeValue(f, response);
-				System.err.println("unknown request written to: " + f.getAbsolutePath());
+				log.info("unknown request written to: {}", f.getAbsolutePath());
 			} catch (Exception e) {
-				e.printStackTrace();
+				log.error("failed to write unknown request dump", e);
 			}
 		}
 		return response;

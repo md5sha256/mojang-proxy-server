@@ -1,6 +1,8 @@
 package net.wouto.proxy.webserver;
 
 import net.wouto.proxy.MojangProxyServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +22,8 @@ import java.net.http.HttpResponse;
  */
 @RestController
 public class PublicKeysHandler {
+
+	private static final Logger log = LoggerFactory.getLogger(PublicKeysHandler.class);
 
 	private static final URI MOJANG_PUBLIC_KEYS = URI.create("https://api.minecraftservices.com/publickeys");
 	private static final long CACHE_TTL_MILLIS = 60 * 60 * 1000L;
@@ -41,11 +45,11 @@ public class PublicKeysHandler {
 				if (body == null) {
 					throw e;
 				}
-				e.printStackTrace(); // upstream failed; serve the stale cache below
+				log.warn("publickeys upstream fetch failed; serving stale cache", e);
 			}
 		}
 		if (MojangProxyServer.LOG_KNOWN_REQUESTS) {
-			System.out.println("relaying publicKeys()");
+			log.debug("relaying publicKeys()");
 		}
 		return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
 	}

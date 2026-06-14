@@ -17,6 +17,8 @@ import java.util.HashMap;
 @SpringBootApplication
 public class MojangProxyServer {
 
+	private static final Logger log = LoggerFactory.getLogger(MojangProxyServer.class);
+
 	public static boolean LOG_UNKNOWN_REQUESTS = false;
 	public static boolean LOG_KNOWN_REQUESTS = true;
 	public static String GAME_PROFILE_CACHE_CLASS = null;
@@ -36,14 +38,14 @@ public class MojangProxyServer {
 				.build();
 		if (GAME_PROFILE_CACHE_CLASS == null) {
 			this.gameProfileCache = new GameProfileCache(MojangProxyServer.config);
-			System.out.println("Using default in-memory GameProfileCache");
+			log.info("Using default in-memory GameProfileCache");
 		} else {
 			try {
 				Class<GameProfileCache> c = (Class<GameProfileCache>) Class.forName(GAME_PROFILE_CACHE_CLASS);
 				Constructor<GameProfileCache> cons = c.getDeclaredConstructor(Config.class);
 				this.gameProfileCache = cons.newInstance(MojangProxyServer.config);
 			} catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | InvocationTargetException | IllegalAccessException e) {
-				e.printStackTrace();
+				log.error("Failed to load GameProfileCache '{}'", GAME_PROFILE_CACHE_CLASS, e);
 			}
 		}
 	}

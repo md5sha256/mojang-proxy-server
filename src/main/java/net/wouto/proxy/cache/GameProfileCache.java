@@ -10,6 +10,8 @@ import net.wouto.proxy.response.result.HasJoinedMinecraftServerResponseImpl;
 import net.wouto.proxy.response.result.MinecraftProfilePropertiesResponseImpl;
 import net.wouto.proxy.response.result.ProfileSearchResultsResponseImpl;
 import net.wouto.proxy.service.MojangAPI;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,6 +21,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 public class GameProfileCache {
+
+    private static final Logger log = LoggerFactory.getLogger(GameProfileCache.class);
 
     private Cache<String, GameProfile> nameProfileCache;
     private Cache<UUID, GameProfile> uuidProfileCache;
@@ -74,18 +78,18 @@ public class GameProfileCache {
             Collections.addAll(profiles, res.getProfiles());
         }
         response.setProfiles(profiles.toArray(new GameProfile[profiles.size()]));
-        // <DEBUG>
-        System.out.println("GameProfileCache's interpretation");
-        int length = (response.getProfiles() != null ? response.getProfiles().length : 0);
-        System.out.println("Profile count: " + length);
-        if (response.getProfiles() != null) {
-            for (GameProfile gameProfile : response.getProfiles()) {
-                for (Property property : gameProfile.getProperties().values()) {
-                    System.out.println("\t" + property.getName() + " = " + property.getValue() + (!property.hasSignature() ? "" : " (signed: " + property.getSignature() + ")"));
+        if (log.isDebugEnabled()) {
+            int length = (response.getProfiles() != null ? response.getProfiles().length : 0);
+            log.debug("GameProfileCache's interpretation: profile count = {}", length);
+            if (response.getProfiles() != null) {
+                for (GameProfile gameProfile : response.getProfiles()) {
+                    for (Property property : gameProfile.getProperties().values()) {
+                        log.debug("\t{} = {}{}", property.getName(), property.getValue(),
+                                property.hasSignature() ? " (signed: " + property.getSignature() + ")" : "");
+                    }
                 }
             }
         }
-        // </DEBUG>
         return response;
     }
 
@@ -98,7 +102,7 @@ public class GameProfileCache {
             this.nameProfileCache.put(gameProfile.getName(), gameProfile);
             this.uuidProfileCache.put(gameProfile.getId(), gameProfile);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.warn("hasJoined failed for {}, falling back to cache", username, e);
             GameProfile profile = null;
             try {
                 profile = this.nameProfileCache.get(username, getNullProfile);
