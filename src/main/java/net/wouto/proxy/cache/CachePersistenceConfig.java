@@ -3,6 +3,7 @@ package net.wouto.proxy.cache;
 import jakarta.annotation.PostConstruct;
 import net.wouto.proxy.MojangProxyServer;
 import net.wouto.proxy.cache.store.ProfileStore;
+import net.wouto.proxy.metrics.MetricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
@@ -23,9 +24,11 @@ public class CachePersistenceConfig {
     private static final Logger log = LoggerFactory.getLogger(CachePersistenceConfig.class);
 
     private final ProfileStore profileStore;
+    private final MetricsService metrics;
 
-    public CachePersistenceConfig(ProfileStore profileStore) {
+    public CachePersistenceConfig(ProfileStore profileStore, MetricsService metrics) {
         this.profileStore = profileStore;
+        this.metrics = metrics;
     }
 
     @PostConstruct
@@ -33,7 +36,8 @@ public class CachePersistenceConfig {
         GameProfileCache cache = MojangProxyServer.get().getGameProfileCache();
         if (cache != null) {
             cache.setProfileStore(profileStore);
-            log.info("Persistent L2 profile store attached to GameProfileCache");
+            cache.setMetrics(metrics);
+            log.info("Persistent L2 profile store and metrics attached to GameProfileCache");
         } else {
             log.warn("No GameProfileCache available; L2 persistent store not attached");
         }

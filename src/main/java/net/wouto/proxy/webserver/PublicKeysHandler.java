@@ -1,6 +1,7 @@
 package net.wouto.proxy.webserver;
 
 import net.wouto.proxy.MojangProxyServer;
+import net.wouto.proxy.metrics.MetricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -29,11 +30,17 @@ public class PublicKeysHandler {
 	private static final long CACHE_TTL_MILLIS = 60 * 60 * 1000L;
 
 	private final HttpClient httpClient = HttpClient.newHttpClient();
+	private final MetricsService metrics;
 	private volatile String cachedBody;
 	private volatile long fetchedAt;
 
+	public PublicKeysHandler(MetricsService metrics) {
+		this.metrics = metrics;
+	}
+
 	@GetMapping(value = "/publickeys", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> publicKeys() throws Exception {
+		this.metrics.increment(MetricsService.ENDPOINT_PUBLIC_KEYS);
 		String body = this.cachedBody;
 		long now = System.currentTimeMillis();
 		if (body == null || now - this.fetchedAt > CACHE_TTL_MILLIS) {

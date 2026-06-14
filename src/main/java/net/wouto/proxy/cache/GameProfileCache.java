@@ -10,6 +10,7 @@ import net.wouto.proxy.response.result.HasJoinedMinecraftServerResponseImpl;
 import net.wouto.proxy.response.result.MinecraftProfilePropertiesResponseImpl;
 import net.wouto.proxy.response.result.ProfileSearchResultsResponseImpl;
 import net.wouto.proxy.cache.store.ProfileStore;
+import net.wouto.proxy.metrics.MetricsService;
 import net.wouto.proxy.service.MojangAPI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,12 @@ public class GameProfileCache {
      */
     private volatile ProfileStore profileStore;
 
+    /**
+     * Optional metrics sink. Null until wired up after the Spring context starts
+     * (see {@link CachePersistenceConfig}); when null, instrumentation is a no-op.
+     */
+    private volatile MetricsService metrics;
+
     public GameProfileCache(Config config) {
         long cacheCount = Long.parseLong(config.getProperty("cacheCount", "10000"));
         long cacheDurationSeconds = Long.parseLong(config.getProperty("cacheDuration", "3600"));
@@ -56,6 +63,19 @@ public class GameProfileCache {
         this.profileStore = profileStore;
     }
 
+    /** Wires the metrics sink. Called once after the Spring context is up. */
+    public void setMetrics(MetricsService metrics) {
+        this.metrics = metrics;
+    }
+
+    /** Records a counter if a metrics sink is wired; a no-op otherwise. */
+    private void rec(String metric) {
+        MetricsService m = this.metrics;
+        if (m != null) {
+            m.increment(metric);
+        }
+    }
+
     public MinecraftProfilePropertiesResponseImpl fillGameProfile(String uuid, boolean unsigned) {
         UUID uuidObj = null;
         try {
@@ -68,7 +88,14 @@ public class GameProfileCache {
                 return new MinecraftProfilePropertiesResponseImpl(cached);
             }
         }
-        MinecraftProfilePropertiesResponseImpl response = MojangAPI.getInstance().fillGameProfile(uuid, true);
+        rec(MetricsService.UPSTREAM_CALLS);
+        MinecraftProfilePropertiesResponseImpl response;
+        try {
+            response = MojangAPI.getInstance().fillGameProfile(uuid, true);
+        } catch (RuntimeException e) {
+            rec(MetricsService.UPSTREAM_ERRORS);
+            throw e;
+        }
         cache(response.getGameProfile());
         return response;
     }
@@ -88,8 +115,11 @@ public class GameProfileCache {
             return false;
         });
         if (!names.isEmpty()) {
+            rec(MetricsService.UPSTREAM_CALLS);
             ProfileSearchResultsResponseImpl res = MojangAPI.getInstance().findProfilesByNames(names);
-            if (res != null && res.getProfiles() != null) {
+            if (res == null) {
+                rec(MetricsService.UPSTREAM_ERRORS);
+            } else if (res.getProfiles() != null) {
                 for (GameProfile profile : res.getProfiles()) {
                     if (profile != null) {
                         profiles.add(profile);
@@ -116,11 +146,13 @@ public class GameProfileCache {
     public HasJoinedMinecraftServerResponseImpl hasJoined(String username, String serverId) throws Exception {
         HasJoinedMinecraftServerResponseImpl response = null;
         try {
+            rec(MetricsService.UPSTREAM_CALLS);
             response = MojangAPI.getInstance().hasJoined(username, serverId);
             GameProfile gameProfile = new GameProfile(response.getId(), response.getName());
             gameProfile.getProperties().putAll(response.getPropertyMap());
             cache(gameProfile);
         } catch (Exception e) {
+            rec(MetricsService.UPSTREAM_ERRORS);
             log.warn("hasJoined failed for {}, falling back to cache", username, e);
             GameProfile profile = lookupByName(username);
             if (profile != null) {
@@ -134,6 +166,7 @@ public class GameProfileCache {
     private GameProfile lookupByUuid(UUID uuid) {
         GameProfile profile = this.uuidProfileCache.getIfPresent(uuid);
         if (profile != null) {
+            rec(MetricsService.CACHE_L1_HIT);
             return profile;
         }
         ProfileStore store = this.profileStore;
@@ -142,18 +175,22 @@ public class GameProfileCache {
                 profile = store.findByUuid(uuid, minCachedAt()).orElse(null);
                 if (profile != null) {
                     cacheLocally(profile);
+                    rec(MetricsService.CACHE_L2_HIT);
+                    return profile;
                 }
             } catch (Exception e) {
                 log.warn("L2 lookup by uuid {} failed", uuid, e);
             }
         }
-        return profile;
+        rec(MetricsService.CACHE_MISS);
+        return null;
     }
 
     /** Looks up a profile by name through L1, then L2; warms L1 on an L2 hit. */
     private GameProfile lookupByName(String name) {
         GameProfile profile = this.nameProfileCache.getIfPresent(name);
         if (profile != null) {
+            rec(MetricsService.CACHE_L1_HIT);
             return profile;
         }
         ProfileStore store = this.profileStore;
@@ -162,12 +199,15 @@ public class GameProfileCache {
                 profile = store.findByName(name, minCachedAt()).orElse(null);
                 if (profile != null) {
                     cacheLocally(profile);
+                    rec(MetricsService.CACHE_L2_HIT);
+                    return profile;
                 }
             } catch (Exception e) {
                 log.warn("L2 lookup by name {} failed", name, e);
             }
         }
-        return profile;
+        rec(MetricsService.CACHE_MISS);
+        return null;
     }
 
     /** Writes a full profile through to both L1 and the L2 store. */

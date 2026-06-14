@@ -12,3 +12,16 @@ CREATE TABLE IF NOT EXISTS game_profile (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_name ON game_profile (name_lower);
+
+-- Runtime metrics, stored as a time series: one row per counter per flush.
+-- value is the cumulative counter total at ts (monotonic across restarts, since
+-- counters are seeded from the latest row on startup). Old rows are pruned by a
+-- retention-based scheduled cleanup.
+CREATE TABLE IF NOT EXISTS metric_snapshot (
+    ts    INTEGER NOT NULL, -- epoch millis the snapshot was taken
+    name  TEXT NOT NULL,    -- counter name, e.g. 'cache.l1_hit'
+    value INTEGER NOT NULL  -- cumulative value at ts
+);
+
+-- Supports the MAX(ts)-per-name latest lookup and the ts<? retention delete.
+CREATE INDEX IF NOT EXISTS idx_metric_name_ts ON metric_snapshot (name, ts);

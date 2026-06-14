@@ -1,6 +1,7 @@
 package net.wouto.proxy.webserver;
 
 import net.wouto.proxy.MojangProxyServer;
+import net.wouto.proxy.metrics.MetricsService;
 import net.wouto.proxy.response.BaseResponse;
 import net.wouto.proxy.response.error.UnknownRequestResponse;
 import org.slf4j.Logger;
@@ -25,7 +26,10 @@ public class UnknownRestHandler {
 	private File unknownRequestsFolder = new File("./unknown-requests/");
 	private DateFormat dateFormat = new SimpleDateFormat("YYYY-MM-dd HH.mm.ss.SSS");
 
-	public UnknownRestHandler() {
+	private final MetricsService metrics;
+
+	public UnknownRestHandler(MetricsService metrics) {
+		this.metrics = metrics;
 		if (!this.unknownRequestsFolder.exists()) {
 			this.unknownRequestsFolder.mkdirs();
 		}
@@ -34,6 +38,7 @@ public class UnknownRestHandler {
 	@RequestMapping(value = "/**", method = {RequestMethod.GET, RequestMethod.POST})
 	@ResponseBody
 	public BaseResponse handleUnknownRequest(HttpServletRequest request) throws Exception {
+		this.metrics.increment(MetricsService.ENDPOINT_UNKNOWN);
 		String body = null;
 		if (request.getMethod().equals(RequestMethod.POST.name())) {
 			StringBuilder jb = new StringBuilder();
