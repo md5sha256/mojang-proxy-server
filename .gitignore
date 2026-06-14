@@ -1,2 +1,7 @@
 *.iml
 target/
+
+# Runtime L2 cache (SQLite) and its WAL/SHM sidecars
+cache.db
+cache.db-shm
+cache.db-wal
