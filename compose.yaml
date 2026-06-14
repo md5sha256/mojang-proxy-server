@@ -1,0 +1,43 @@
+# Debug stack: the mojang-proxy-server (built from source) plus a Paper server
+# wired to authenticate through it. Both run on a shared bridge network so the
+# Paper container can reach the proxy by service name (http://proxy:8000).
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: docker/proxy/Dockerfile
+    image: mojang-proxy-server:dev
+    container_name: mojang-proxy-server
+    restart: unless-stopped
+    # Published to the host too, so you can hit the proxy directly while debugging.
+    ports:
+      - "8000:8000"
+    networks:
+      - proxy-debug
+
+  paper:
+    build:
+      context: docker/paper
+      dockerfile: Dockerfile
+    image: mojang-proxy-paper:dev
+    container_name: mojang-proxy-paper
+    restart: unless-stopped
+    # Keep STDIN/TTY open so `docker attach` reaches the server console.
+    stdin_open: true
+    tty: true
+    # Publish the server port to the host machine (host:container).
+    ports:
+      - "25565:25565"
+    environment:
+      MEMORY: 2G
+    depends_on:
+      - proxy
+    networks:
+      - proxy-debug
+    # No named volume: /data is ephemeral, so every recreate starts from a fresh
+    # world. This is a debug stack — no world to persist, and it sidesteps the
+    # "corrupt level.dat survives in a volume" failure mode entirely.
+
+networks:
+  proxy-debug:
+    driver: bridge

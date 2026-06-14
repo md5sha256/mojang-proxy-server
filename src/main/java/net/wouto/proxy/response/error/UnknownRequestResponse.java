@@ -1,8 +1,8 @@
 package net.wouto.proxy.response.error;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import net.wouto.proxy.MojangProxyServer;
 import net.wouto.proxy.response.ErrorResponse;
 

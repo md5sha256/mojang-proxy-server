@@ -1,0 +1,7 @@
+.git
+.idea
+*.iml
+target
+out
+docker
+.claude

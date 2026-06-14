@@ -1,7 +1,7 @@
 package net.wouto.proxy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 import net.wouto.proxy.cache.GameProfileCache;
 import net.wouto.proxy.exception.InvalidProxyKeyException;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -21,16 +21,17 @@ public class MojangProxyServer {
 	public static String AUTH_KEY = null;
 
 	private static MojangProxyServer instance;
-	private ObjectMapper objectMapper;
-	private ObjectMapper objectMapperPretty;
+	private JsonMapper objectMapper;
+	private JsonMapper objectMapperPretty;
 	private GameProfileCache gameProfileCache;
 
 	private static Config config;
 
 	public void start(String[] args) {
- 		this.objectMapper = new ObjectMapper();
-		this.objectMapperPretty = new ObjectMapper();
-		this.objectMapperPretty.configure(SerializationFeature.INDENT_OUTPUT, true);
+ 		this.objectMapper = JsonMapper.builder().build();
+		this.objectMapperPretty = JsonMapper.builder()
+				.enable(SerializationFeature.INDENT_OUTPUT)
+				.build();
 		if (GAME_PROFILE_CACHE_CLASS == null) {
 			this.gameProfileCache = new GameProfileCache(MojangProxyServer.config);
 			System.out.println("Using default in-memory GameProfileCache");
@@ -91,7 +92,7 @@ public class MojangProxyServer {
 		return instance;
 	}
 
-	public ObjectMapper getMapper(boolean pretty) {
+	public JsonMapper getMapper(boolean pretty) {
 		return (pretty ? this.objectMapperPretty : this.objectMapper);
 	}
 
